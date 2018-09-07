@@ -1,0 +1,148 @@
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>my d3</title>
+	<script src="https://d3js.org/d3.v5.min.js"></script>
+	<style type="text/css">
+		.axis path,
+		.axis line{
+			fill:none;
+			stroke:white;
+			shape-rendering:crispEdges;   /*shape-rendering:让坐标轴和刻度线边缘更加整齐，而显得清晰; */
+		}
+
+		.axis text{
+			font-family: sans-serif;
+			font-size:11px;
+		}
+
+		.axis g.tick text{
+	    	fill:white;                 /*这里就是那种doc的读法，因为那个g是axis的子标签，所以可用加空格取到，又因为子标签的class是tick,所以可以用.取到
+	    }
+	</style>
+</head>
+<body>
+	<script type="text/javascript">
+		
+		var w = 1100;
+		var h = 400;
+		var padding = 40;     //防止元素被裁剪
+
+		d3.dsv(",",'years.csv',function(text){
+			return {
+				"year":parseInt(text.year),
+				"num":parseInt(text.num),
+				"mean_rate":parseFloat(text.mean_rate)
+			}
+		}).then(function(dataset){
+			//尺度
+		//设置线性尺度
+		var xScale = d3.scaleLinear()
+		    .domain([1880,d3.max(dataset,function(d){return d.year;})])
+		    .range([padding,w- padding]);
+		var yScale = d3.scaleLinear()
+		    .domain([5,d3.max(dataset,function(d){return d.mean_rate;})])
+		    .range([h- padding,2*padding]);
+		// 设置圆的半径
+		var rScale = d3.scaleLinear()
+		    .domain([0,d3.max(dataset,function(d){return d.mean_rate;})])
+		    .range([1,3]);
+		//颜色scale
+		var cScale = d3.scaleLinear()
+			         .domain([5,d3.max(dataset,function(d){return d.mean_rate;})])
+			         .range([0,255]); 
+
+		//添加画布
+		svg = d3.select("body").append("svg")
+		      .attr("width",w)
+		      .attr("height",h)
+		      .attr("transform","translate(" + 50 + "," + 100 +")");
+
+		//渐变色
+		var radialGradient = svg.append("defs")
+		    .append("radialGradient")
+		    .attr("id","radial-gradient");
+
+		radialGradient.append("stop")
+		         .attr("offset","0%")
+		         .attr("stop-color","#555966");
+
+		radialGradient.append("stop")
+		          .attr("offset","110%")
+		          .attr("stop-color","#302d2d");     //定义在下面的是底色
+
+		svg.append("rect")
+		   .attr("width","100%")
+		   .attr("height","100%")
+		   .attr("fill","url(#radial-gradient)");
+
+		//添加标题
+		svg.append("text")
+		   .text("年度平均评分图")
+		   .attr("x",(w/2 - 2*padding))
+		   .attr("y", padding)
+		   .attr("fill","white")
+		   .attr("font-family","sans-serif")
+		   .attr("font-size","13px");
+
+
+		//添加坐标轴
+		var xAxis = d3.axisBottom()
+		    .scale(xScale)
+		    .ticks(15)
+		    ;               //设置刻度的个数
+		//将坐标轴插入svg当中
+		svg.append("g")               //这里的这个g只是说将坐标轴归为一类的意思，没有明确的含义与所指
+		   .attr("class","axis")      //添加类名，这样就可以使用css来控制样式了
+		   .attr("transform","translate(0," + (h- padding) + ")")    //坐标轴向下移动h - padding个像素
+		   .call(xAxis);
+
+		//添加y轴坐标轴
+		var yAxis = d3.axisLeft()
+		    .scale(yScale)
+		    .ticks(5);
+		svg.append("g")
+		   .attr("class","axis")
+		   .attr("transform","translate(" + padding + ",0)")    //让坐标轴向右移动padding个像素
+		   .call(yAxis);
+
+		//以数据为驱动添加圆
+		svg.selectAll("circle")
+		   .data(dataset)
+		   .enter()
+		   .append("circle")
+		   .attr("cx",function(d){
+		   	return xScale(d.year);
+		   })
+		   .attr("cy",function(d){
+		   	return yScale(d.mean_rate);
+		   })
+		   .attr("r",function(d){
+		   	return rScale(d.mean_rate);
+		   })
+		   .attr("fill",function(d){
+		   	return "rgb(" + cScale(d.mean_rate)+",180,188)";
+		   });
+		})
+
+		//添加标签
+		/*
+		svg.selectAll("text")      //添加数据标签
+		   .data(dataset)
+		   .enter()
+		   .append("text")
+		   .text(function(d){
+		   	return d[0] + "," + d[1];
+		   })
+		   .attr("x",function(d){
+		   	return xScale(d[0]);
+		   })
+		   .attr("y",function(d){
+		   	return yScale(d[1]);
+		   })
+		   .attr("font-family","sans-serif")
+		   .attr("font-size","11px")
+		   .attr("fill",'blue');
+		*/
+	</script>
+</body>

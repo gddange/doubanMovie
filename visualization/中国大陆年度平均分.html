@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>My csv</title>
+	<script src="https://d3js.org/d3.v5.min.js"></script>
+	<style type="text/css">
+		.axis path,
+		.axis line{
+		fill:none;
+		stroke:#ede8e8;
+		shape-rendering:crispEdges;
+	},
+	    .axis text{
+	    	font-family: sans-serif;
+	    	font-size:25px;
+	    }
+	    .axis g.tick text{
+	    	fill:#ede8e8;                 /*这里就是那种doc的读法，因为那个g是axis的子标签，所以可用加空格取到，又因为子标签的class是tick,所以可以用.取到
+	    }
+	</style>
+</head>
+<body>
+	<script type="text/javascript">
+		var w = 1100;
+		var h = 350;
+		var padding = 2;
+		var margin = 50;
+		var dataset = [12,23,45,23,15];
+		svg1 = d3.select("body").append("svg")
+		  .attr("width",w)
+		  .attr("height",h)
+		  .attr("transform","translate(" + margin + "," + margin+")" );    //transform 的translate就是让坐标为一多少个坐标
+
+		//用rect来填充背景色，并将背景色设置为渐变色
+		var radialGradient = svg1.append("defs")
+		    .append("radialGradient")
+		    .attr("id","radial-gradient");
+
+		radialGradient.append("stop")
+		         .attr("offset","0%")
+		         .attr("stop-color","#555966");
+
+		radialGradient.append("stop")
+		          .attr("offset","110%")
+		          .attr("stop-color","#302d2d");     //定义在下面的是底色
+
+		svg1.append("rect")
+		   .attr("width","100%")
+		   .attr("height","100%")
+		   .attr("fill","url(#radial-gradient)");
+
+		//添加标题
+		svg1.append("text")
+		   .text("中国大陆年度平均评分图")
+		   .attr("x",(w/2 - margin))
+		   .attr("y", margin/2)
+		   .attr("fill","white")
+		   .attr("font-family","sans-serif")
+		   .attr("font-size","13px");
+
+		//csv文件，因为dsv是异步读取的，所以可以在这里面来进行操作
+		d3.dsv('\t',"china.csv",function(d){
+			return{
+				"year":parseInt(d.year),
+				"rate":parseFloat(d.meanrate)
+			};
+		}).then(function(text){
+			//console.log(text)
+			var xScale = d3.scaleLinear()
+			        .domain([1900,d3.max(text,function(d){return d.year;})])
+			        .range([margin,w-margin])
+
+			var yScale = d3.scaleLinear()
+			        .domain([0,d3.max(text,function(d){return d.rate;})])
+			        .range([h - margin/2,margin]);
+			var cScale = d3.scaleLinear()
+			         .domain([0,d3.max(text,function(d){return d.rate;})])
+			         .range([0,255])
+			         .clamp(true);     //clamp里面的参数为true的话，就是可以做数据的平滑，即超过边界的数据被放到边界上
+
+			var rScale = d3.scaleLinear()
+		    .domain([0,d3.max(text,function(d){return d.rate;})])
+		    .range([1,6]);
+
+			var x = d3.scaleBand()              //序数比例尺
+			        .rangeRound([margin,w])
+			        .padding(5*xScale((w/text.length) + 2*padding) )
+			        .align(0.2);
+			x.domain(text.map(function(d,i){
+				if(i % 5 == 0){
+					return d.year;
+				}
+			}));  
+
+			// 设置坐标轴
+		    var yAxis = d3.axisLeft()
+		        .scale(yScale)
+		        .ticks(5)
+		        ;
+		    var xAxis = d3.axisBottom()
+		                .scale(x)
+		                ;
+
+		    svg1.append("g")
+		        .attr("class","axis")
+		        .attr("transform","translate(" + margin + ",0)")
+		        .call(yAxis);
+		    svg1.append("g")
+		        .attr("class","axis")
+		        .attr("transform","translate(0," + (h - margin/2) +")")
+		        .call(xAxis);
+
+			svg1.selectAll("circle")
+				   .data(text)
+				   .enter()
+				   .append("circle")
+				   .attr("cx",function(d,i){
+				   	return xScale(d.year);
+				   })
+				   .attr("cy",function(d){
+				   	return yScale(d.rate);
+				   })
+				   .attr("r",function(d){
+				   	return rScale(d.rate);     //因为现在这个比例尺是倒的，所以大的值进去以后会变小，所以就起到了将坐标逆转过来的作用，但是要把长度由y减去比例尺算出来的那个，以让该大的部分变大
+				   })
+				   .attr("fill",function(d){
+				   	return "rgb(" + cScale(d.rate) + ",180,189)";
+				   });
+
+		    });
+	</script>
+</body>
+</html>

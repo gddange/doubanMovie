@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Douban movie</title>
+	<script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+<body>
+	<script type="text/javascript">
+		//画六个国家的柱状图,还得统计数据来着，难受
+		var w = 420;
+		var h = 280;
+		var padding = 20;
+		var margin = 27;
+		var m = 0;
+
+		//读取tsv文件
+		var dataset = ["中国大陆","美国","日本","香港","法国","英国"]
+		for (var i=0; i<2; i++){
+			for(var j=0;j<3;j++){
+				//读取文件的下标
+				var k = 0;
+				if (i == 0){
+					k = i+j;
+				}
+				if(i == 1){
+					k = 3+j;
+				}
+				d3.dsv("\t","./countryrate/"+dataset[k]+".csv",function(text){
+					return {
+						"rate":parseFloat(text.rate),
+						"num":parseFloat(text.num),
+					}
+				}).then(function(data){
+
+					svg = addSvg(i,j);
+					svg.attr("transform","translate("+20+","+20+")");
+
+					var xScale = d3.scaleLinear()
+					             .domain([0,w])
+					             .range([0,w-2*margin]);
+					var yScale = d3.scaleLinear()
+					        .domain([0,d3.max(data,function(d){return d.num;})])     //doamin 是输入域，而range是输出域
+					        .range([h-margin,margin]);
+
+					rScale = d3.scaleLinear()
+			         .domain([0,d3.max(data,function(d){return d.num;})])
+			         .range([0,255])
+			         .clamp(true);     //clamp里面的参数为true的话，就是可以做数据的平滑，即超过边界的数据被放到边界上
+
+			         //x轴的坐标以及刻度
+			        var xAxis = d3.axisBottom()
+		                .scale(d3.scaleLinear().domain([d3.min(data,function(d){return d.rate;}),d3.max(data,function(d){return d.rate;})]).range([0,w-2*margin]))
+		                .ticks(10)
+		                ;
+
+		            var yAxis = d3.axisLeft()
+		                    .scale(yScale)
+		                    .ticks(5);
+
+		            svg.append("g")
+		               .attr("transform","translate(" + margin+ "," + (h - margin)+")")
+		               .call(xAxis);
+
+		            svg.append("g")
+		               .attr("transform","translate(" + (margin) + ",0)")
+		               .call(yAxis);
+
+					svg.selectAll("rect")
+					   .data(data)
+					   .enter()
+					   .append("rect")
+					   .attr("x",function(d,i){
+					   	return i*(xScale(w)/data.length)+margin;
+					   })
+					   .attr("y",function(d){
+					   	return yScale(d.num);
+					   })
+					   .attr("width",xScale(w)/data.length-0.5)
+					   .attr("height",function(d){
+					   	return h - margin - yScale(d.num);
+					   })
+					   .attr("fill",function(d){
+					   	return "rgb("+ rScale(d.num) + ",186,157)";
+					   });
+
+					  addTitle(svg,dataset[m]);
+					  m = m+1;
+				});
+			}
+		}
+		//生成svg对象
+		function addSvg(i,j){
+			svg = d3.selectAll("body").append("svg")
+			        .attr("width",w)
+			        .attr("height",h)
+			return svg;
+		}
+
+		//添加标题
+		function addTitle(svg,text){
+			var title = svg.append("text")
+			              .attr("x",(w/2) - margin)
+			              .attr("y",margin-5)
+			              .text(text)
+			              .attr("font-family","sans-serif")
+			              .attr("font-size","12px")
+			              .attr("fill","black");
+			return title;
+		}
+
+	</script>
+</body>
+</html>
